@@ -16,9 +16,14 @@ namespace TechTalk.SpecFlow.Assist
 
         public static IEnumerable<T> CreateSet<T>(this Table table)
         {
+            return table.CreateSet(row => (T)Activator.CreateInstance(typeof(T)));
+        }
+
+        public static IEnumerable<T> CreateSet<T>(this Table table, Func<TableRow, T> createInstanceFunction)
+        {
             var enumerable = table.Rows.Select(row =>
             {
-                var instance = (T)Activator.CreateInstance(typeof(T));
+                var instance = createInstanceFunction(row);
                 LoadInstanceWithPropertyData<T>(table, instance, row);
                 return instance;
             });

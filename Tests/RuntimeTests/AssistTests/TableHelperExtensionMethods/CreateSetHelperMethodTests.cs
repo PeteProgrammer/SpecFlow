@@ -172,6 +172,17 @@ namespace TechTalk.SpecFlow.RuntimeTests.AssistTests.TableHelperExtensionMethods
             people.First().MiddleInitial.ShouldEqual('O');
             people.First().NullableChar.ShouldEqual('K');
         }
+
+        [Test]
+        public void Person_without_default_constructor_can_be_created_using_create_function()
+        {
+            var table = new Table("ID");
+            table.AddRow("1");
+
+            var people = table.CreateSet(row => new PersonWithConstructor(row.GetInt32("ID")));
+
+            people.First().ID.ShouldEqual(1);
+        }
     }
 
 //    public class Person
