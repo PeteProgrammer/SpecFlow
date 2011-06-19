@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Xml;
 using System.Xml.Serialization;
 using TechTalk.SpecFlow.Generator.Configuration;
+using TechTalk.SpecFlow.Generator.Project;
 
 namespace TechTalk.SpecFlow.Reporting.NUnitExecutionReport
 {
@@ -27,7 +28,7 @@ namespace TechTalk.SpecFlow.Reporting.NUnitExecutionReport
             else
             {
                 XsltHelper.TransformHtml(serializer, report, ReportType, 
-                                         ReportParameters.OutputFile, specFlowProject.GeneratorConfiguration, 
+                                         ReportParameters.OutputFile, specFlowProject.Configuration.GeneratorConfiguration, 
                                          ReportParameters.XsltFile);
             }
         }
@@ -43,7 +44,7 @@ namespace TechTalk.SpecFlow.Reporting.NUnitExecutionReport
         protected virtual ReportElements.NUnitExecutionReport GenerateReport(SpecFlowProject specFlowProject)
         {
             var report = new ReportElements.NUnitExecutionReport();
-            report.ProjectName = specFlowProject.ProjectName;
+            report.ProjectName = specFlowProject.ProjectSettings.ProjectName;
             report.GeneratedAt = DateTime.Now.ToString("g", CultureInfo.InvariantCulture);
 
             XmlDocument xmlTestResult = LoadXmlTestResult();

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using TechTalk.SpecFlow.Generator.Configuration;
+using TechTalk.SpecFlow.Generator.Project;
 
 namespace TechTalk.SpecFlow.Reporting
 {
@@ -87,7 +88,7 @@ namespace TechTalk.SpecFlow.Reporting
                                               BindingType = GetBindingType(scenarioStepAttr),
                                               Regex = regex,
                                               MethodReference = String.Format("{0}.{1}({2})",
-                                                                              method.DeclaringType.FullName, method.Name, String.Join(", ", parameters.Select(pi => pi.ParameterType.Name).ToArray())),
+                                                                              method.ReflectedType.FullName, method.Name, String.Join(", ", parameters.Select(pi => pi.ParameterType.Name).ToArray())),
                                               ParameterNames = parameters.Select(pi => pi.Name).ToArray(),
                                               HasMultilineTextArg = false, //TODO
                                               HasTableArg = hasTableArg
@@ -128,7 +129,7 @@ namespace TechTalk.SpecFlow.Reporting
                                       Assembly.GetExecutingAssembly().GetName().FullName,
                                       typeof(BindingCollector).FullName);
 
-            bindings.AddRange(bindingCollector.CollectBindings(specFlowProject.AssemblyName));
+            bindings.AddRange(bindingCollector.CollectBindings(specFlowProject.ProjectSettings.AssemblyName));
 
             AppDomain.Unload(appDomain);
             return bindings;

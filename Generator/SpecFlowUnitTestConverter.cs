@@ -88,6 +88,9 @@ namespace TechTalk.SpecFlow.Generator
                 else
                     GenerateTest(testType, testSetup, scenario, feature);
             }
+            
+            //before return the generated code, call generate provider's method in case the provider want to customerize the generated code            
+            testGeneratorProvider.FinalizeTestClass(codeNamespace);
             return codeNamespace;
         }
 
@@ -145,7 +148,7 @@ namespace TechTalk.SpecFlow.Generator
                         new CodePrimitiveExpression(feature.Title),
                         new CodePrimitiveExpression(feature.Description),
                         new CodeFieldReferenceExpression(
-                            new CodeTypeReferenceExpression("GenerationTargetLanguage"),
+                            new CodeTypeReferenceExpression("GenerationTargetLanguage"), //TODO: use ProgrammingLanguage
                             codeDomHelper.TargetLanguage.ToString()),
                         GetStringArrayExpression(feature.Tags))));
 
@@ -304,7 +307,13 @@ namespace TechTalk.SpecFlow.Generator
 
             if (scenarioOutline.Examples.ExampleSets.Length > 1)
             {
-                //TODO: check params
+                //check params
+                if (scenarioOutline.Examples.ExampleSets.Skip(1)
+                    .Select(exampleSet => exampleSet.Table.Header.Cells.Select(c => c.Value))
+                    .Any(paramNames => !paramNames.SequenceEqual(paramToIdentifier.Select(p2i => p2i.Key))))
+                {
+                    throw new TestGeneratorException("The example sets must provide the same parameters.");
+                }
             }
 
             var testMethod = GenerateScenarioOutlineBody(feature, scenarioOutline, paramToIdentifier, testType, testMethodName, testSetup);
@@ -317,7 +326,6 @@ namespace TechTalk.SpecFlow.Generator
                 {
                     for (int rowIndex = 0; rowIndex < exampleSet.Table.Body.Length; rowIndex++)
                     {
-                        //TODO: handle examples tags
                         IEnumerable<string> arguments = exampleSet.Table.Body[rowIndex].Cells.Select(c => c.Value);
                         testGeneratorProvider.SetRow(testMethod, arguments, GetNonIgnoreTags(exampleSet.Tags), HasIgnoreTag(exampleSet.Tags));
                     }
@@ -328,17 +336,20 @@ namespace TechTalk.SpecFlow.Generator
                 int exampleSetIndex = 0;
                 foreach (var exampleSet in scenarioOutline.Examples.ExampleSets)
                 {
-                    string exampleSetTitle = exampleSet.Title == null
-                        ? string.Format("Scenarios{0}", exampleSetIndex + 1)
-                        : exampleSet.Title.ToIdentifier();
-
                     bool useFirstColumnAsName = CanUseFirstColumnAsName(exampleSet.Table);
+                    string exampleSetIdentifier = string.IsNullOrEmpty(exampleSet.Title)
+                        ? scenarioOutline.Examples.ExampleSets.Count(es => string.IsNullOrEmpty(es.Title)) > 1
+                            ? string.Format("ExampleSet {0}", exampleSetIndex).ToIdentifier()
+                            : null
+                        : exampleSet.Title.ToIdentifier();
 
                     for (int rowIndex = 0; rowIndex < exampleSet.Table.Body.Length; rowIndex++)
                     {
-                        string variantName = useFirstColumnAsName ? exampleSet.Table.Body[rowIndex].Cells[0].Value.ToIdentifierPart() :
-                                                                                                                                          string.Format("Variant{0}", rowIndex);
-                        GenerateScenarioOutlineTestVariant(testType, scenarioOutline, testMethodName, paramToIdentifier, exampleSetTitle, exampleSet.Table.Body[rowIndex], exampleSet.Tags, variantName);
+                        string variantName = useFirstColumnAsName ? 
+                            exampleSet.Table.Body[rowIndex].Cells[0].Value :
+                            string.Format("Variant {0}", rowIndex);
+
+                        GenerateScenarioOutlineTestVariant(testType, scenarioOutline, testMethodName, paramToIdentifier, exampleSet.Title ?? "", exampleSetIdentifier, exampleSet.Table.Body[rowIndex], exampleSet.Tags, variantName);
                     }
                     exampleSetIndex++;
                 }
@@ -374,19 +385,19 @@ namespace TechTalk.SpecFlow.Generator
             return testMethod;
         }
 
-        private void GenerateScenarioOutlineTestVariant(CodeTypeDeclaration testType, ScenarioOutline scenarioOutline, string testMethodName, List<KeyValuePair<string, string>> paramToIdentifier, string exampleSetTitle, Row row, Tags exampleSetTags, string variantName)
+        private void GenerateScenarioOutlineTestVariant(CodeTypeDeclaration testType, ScenarioOutline scenarioOutline, string testMethodName, 
+            IEnumerable<KeyValuePair<string, string>> paramToIdentifier, string exampleSetTitle, string exampleSetIdentifier,
+            Row row, Tags exampleSetTags, string variantName)
         {
+            var variantNameIdentifier = variantName.ToIdentifier().TrimStart('_');
+
             CodeMemberMethod testMethod = GetTestMethodDeclaration(testType, scenarioOutline, exampleSetTags);
-            testMethod.Name = string.IsNullOrEmpty(exampleSetTitle)
-                ? string.Format("{0}_{1}", testMethod.Name, variantName)
-                : string.Format("{0}_{1}_{2}", testMethod.Name, exampleSetTitle, variantName);
+            testMethod.Name = string.IsNullOrEmpty(exampleSetIdentifier)
+                ? string.Format("{0}_{1}", testMethod.Name, variantNameIdentifier)
+                : string.Format("{0}_{1}_{2}", testMethod.Name, exampleSetIdentifier, variantNameIdentifier);
 
             //call test implementation with the params
-            List<CodeExpression> argumentExpressions = new List<CodeExpression>();
-            foreach (var paramCell in row.Cells)
-            {
-                argumentExpressions.Add(new CodePrimitiveExpression(paramCell.Value));
-            }
+            List<CodeExpression> argumentExpressions = row.Cells.Select(paramCell => new CodePrimitiveExpression(paramCell.Value)).Cast<CodeExpression>().ToList();
 
             argumentExpressions.Add(GetStringArrayExpression(exampleSetTags));
 
@@ -395,6 +406,9 @@ namespace TechTalk.SpecFlow.Generator
                     new CodeThisReferenceExpression(),
                     testMethodName,
                     argumentExpressions.ToArray()));
+
+            var arguments = paramToIdentifier.Select((p2i, paramIndex) => new KeyValuePair<string, string>(p2i.Key, row.Cells[paramIndex].Value)).ToList();
+            testGeneratorProvider.SetTestVariant(testMethod, scenarioOutline.Title, exampleSetTitle, variantName, arguments);
         }
 
         private void GenerateTest(CodeTypeDeclaration testType, CodeMemberMethod testSetup, Scenario scenario, Feature feature)
@@ -415,15 +429,37 @@ namespace TechTalk.SpecFlow.Generator
             else
             {
                 // merge tags list
-                // Enumerable.ToArray(Enumerable.Concat(tags1, tags1));
-                tagsExpression = new CodeMethodInvokeExpression(
-                    new CodeTypeReferenceExpression(typeof(Enumerable)),
-                    "ToArray",
-                    new CodeMethodInvokeExpression(
-                        new CodeTypeReferenceExpression(typeof(Enumerable)),
-                        "Concat",
-                        GetStringArrayExpression(scenario.Tags),
-                        additionalTagsExpression));
+                // var tags = tags1
+                // if (tags2 != null)
+                //   tags = Enumerable.ToArray(Enumerable.Concat(tags1, tags1));
+                testMethod.Statements.Add(
+                    new CodeVariableDeclarationStatement(typeof(string[]), "__tags", GetStringArrayExpression(scenario.Tags)));
+                tagsExpression = new CodeVariableReferenceExpression("__tags");
+                testMethod.Statements.Add(
+                    new CodeConditionStatement(
+                        new CodeBinaryOperatorExpression(
+                            additionalTagsExpression, 
+                            CodeBinaryOperatorType.IdentityInequality, 
+                            new CodePrimitiveExpression(null)),
+                        new CodeAssignStatement(
+                            tagsExpression, 
+                            new CodeMethodInvokeExpression(
+                                new CodeTypeReferenceExpression(typeof (Enumerable)),
+                                "ToArray",
+                                new CodeMethodInvokeExpression(
+                                    new CodeTypeReferenceExpression(typeof (Enumerable)),
+                                    "Concat",
+                                    tagsExpression,
+                                    additionalTagsExpression)))));
+
+//                tagsExpression = new CodeMethodInvokeExpression(
+//                    new CodeTypeReferenceExpression(typeof(Enumerable)),
+//                    "ToArray",
+//                    new CodeMethodInvokeExpression(
+//                        new CodeTypeReferenceExpression(typeof(Enumerable)),
+//                        "Concat",
+//                        GetStringArrayExpression(scenario.Tags),
+//                        additionalTagsExpression));
             }
             testMethod.Statements.Add(
                 new CodeVariableDeclarationStatement(SCENARIOINFO_TYPE, "scenarioInfo",

@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 using TechTalk.SpecFlow.Generator.Configuration;
+using TechTalk.SpecFlow.Generator.Project;
 using TechTalk.SpecFlow.Parser.SyntaxElements;
 using TechTalk.SpecFlow.Reporting.StepDefinitionReport.ReportElements;
 
@@ -32,14 +33,14 @@ namespace TechTalk.SpecFlow.Reporting.StepDefinitionReport
             specFlowProject = MsBuildProjectReader.LoadSpecFlowProjectFromMsBuild(reportParameters.ProjectFile);
             parsedFeatures = ParserHelper.GetParsedFeatures(specFlowProject);
 
-            var basePath = Path.Combine(specFlowProject.ProjectFolder, reportParameters.BinFolder);
+            var basePath = Path.Combine(specFlowProject.ProjectSettings.ProjectFolder, reportParameters.BinFolder);
             bindings = BindingCollector.CollectBindings(specFlowProject, basePath);
         }
 
         public ReportElements.StepDefinitionReport GenerateReport()
         {
             report = new ReportElements.StepDefinitionReport();
-            report.ProjectName = specFlowProject.ProjectName;
+            report.ProjectName = specFlowProject.ProjectSettings.ProjectName;
             report.GeneratedAt = DateTime.Now.ToString("g", CultureInfo.InvariantCulture);
             report.ShowBindingsWithoutInsance = ReportParameters.ShowBindingsWithoutInsance;
 
@@ -214,7 +215,7 @@ namespace TechTalk.SpecFlow.Reporting.StepDefinitionReport
             }
             else
             {
-                XsltHelper.TransformHtml(serializer, report, GetType(), ReportParameters.OutputFile, specFlowProject.GeneratorConfiguration, ReportParameters.XsltFile);
+                XsltHelper.TransformHtml(serializer, report, GetType(), ReportParameters.OutputFile, specFlowProject.Configuration.GeneratorConfiguration, ReportParameters.XsltFile);
             }
         }
 
@@ -330,12 +331,12 @@ namespace TechTalk.SpecFlow.Reporting.StepDefinitionReport
         private ScenarioStep CloneTo(ScenarioStep step, string currentBlock)
         {
             ScenarioStep newStep = null;
-            if (currentBlock == "Given")
-                newStep = new Given();
-            else if (currentBlock == "When")
+            if (currentBlock == "When")
                 newStep = new When();
             else if (currentBlock == "Then")
                 newStep = new Then();
+            else // Given or empty
+                newStep = new Given();
 
             Debug.Assert(newStep != null);
 

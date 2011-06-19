@@ -13,8 +13,8 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
         private const string FEATURE_TITLE_PROPERTY_NAME = "FeatureTitle";
         private const string FACT_ATTRIBUTE = "Xunit.FactAttribute";
         private const string FACT_ATTRIBUTE_SKIP_PROPERTY_NAME = "Skip";
-        private const string THEORY_ATTRIBUTE = "Xunit.TheoryAttribute";
-        private const string INLINEDATA_ATTRIBUTE = "Xunit.InlineDataAttribute";
+        private const string THEORY_ATTRIBUTE = "Xunit.Extensions.TheoryAttribute";
+        private const string INLINEDATA_ATTRIBUTE = "Xunit.Extensions.InlineDataAttribute";
         private const string SKIP_REASON = "Ignored";
         private const string TRAIT_ATTRIBUTE = "Xunit.TraitAttribute";
         private const string IUSEFIXTURE_INTERFACE = "Xunit.IUseFixture";
@@ -233,6 +233,19 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
         {
             // xUnit doesn't have a DescriptionAttribute so using a TraitAttribute instead
             SetProperty(customAttributes, "Description", description);
+        }
+
+
+        public virtual void FinalizeTestClass(CodeNamespace codeNameSpace)
+        {
+            // by default, doing nothing to the final generated code
+            return;
+        }
+
+        public void SetTestVariant(CodeMemberMethod memberMethod, string title, string exampleSetName, string variantName, IEnumerable<KeyValuePair<string, string>> arguments)
+        {
+            // doing nothing since we support RowTest
+            return;
         }
     }
 }

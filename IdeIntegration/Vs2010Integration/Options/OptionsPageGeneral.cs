@@ -15,6 +15,12 @@ namespace TechTalk.SpecFlow.Vs2010Integration.Options
     [ComVisible(true)]
     public class OptionsPageGeneral : DialogPage
     {
+        [Category("Analysis Settings")]
+        [Description("Controls whether SpecFlow should collect binding information and step suggestions from the feature files. (restart required)")]
+        [DisplayName(@"Enable project-wide analysis")]
+        [DefaultValue(IntegrationOptionsProvider.EnableAnalysisDefaultValue)]
+        public bool EnableAnalysis { get; set; }
+
         private bool enableSyntaxColoring = true;
         [Category("Editor Settings")]
         [Description("Controls whether the different syntax elements of the feature files should be indicated in the editor.")]
@@ -46,5 +52,34 @@ namespace TechTalk.SpecFlow.Vs2010Integration.Options
         [DisplayName(@"Enable IntelliSense")]
         [DefaultValue(IntegrationOptionsProvider.EnableIntelliSenseDefaultValue)]
         public bool EnableIntelliSense { get; set; }
+
+        [Category("Editor Settings")]
+        [Description("Controls whether the tables should be formatted automatically when you type \"|\" character.")]
+        [DisplayName(@"Enable Table Formatting")]
+        [DefaultValue(IntegrationOptionsProvider.EnableTableAutoFormatDefaultValue)]
+        public bool EnableTableAutoFormat { get; set; }
+
+        [Category("Tracing")]
+        [Description("Controls whether diagnostic trace messages should be emitted to the output window.")]
+        [DisplayName(@"Enable Tracing")]
+        [DefaultValue(IntegrationOptionsProvider.EnableTracingDefaultValue)]
+        public bool EnableTracing { get; set; }
+
+        [Category("Tracing")]
+        [Description("Specifies the enabled the tracing categories in a comma-seperated list. Use \"all\" to trace all categories.")]
+        [DisplayName(@"Tracing Categories")]
+        [DefaultValue(IntegrationOptionsProvider.TracingCategoriesDefaultValue)]
+        public string TracingCategories { get; set; }
+
+        public OptionsPageGeneral()
+        {
+            EnableAnalysis = IntegrationOptionsProvider.EnableAnalysisDefaultValue;
+            EnableSyntaxColoring = IntegrationOptionsProvider.EnableSyntaxColoringDefaultValue;
+            EnableOutlining = IntegrationOptionsProvider.EnableOutliningDefaultValue;
+            EnableIntelliSense = IntegrationOptionsProvider.EnableIntelliSenseDefaultValue;
+            EnableTableAutoFormat = IntegrationOptionsProvider.EnableTableAutoFormatDefaultValue;
+            EnableTracing = IntegrationOptionsProvider.EnableTracingDefaultValue;
+            TracingCategories = IntegrationOptionsProvider.TracingCategoriesDefaultValue;
+        }
     }
 }

@@ -14,28 +14,38 @@ namespace TechTalk.SpecFlow.Assist
             return instance;
         }
 
+        public static void FillInstance<T>(this Table table, T instance)
+        {
+            LoadInstanceWithKeyValuePairs(table, instance);
+        }
+
         public static IEnumerable<T> CreateSet<T>(this Table table)
         {
-            return table.CreateSet(row => (T)Activator.CreateInstance(typeof(T)));
+            var pivotTable = new PivotTable(table);
+
+            var list = new List<T>();
+
+            for (var index = 0; index < table.Rows.Count(); index++)
+            {
+                var instance = pivotTable.GetInstanceTable(index).CreateInstance<T>();
+                list.Add(instance);
+            }
+
+            return list;
         }
 
         public static IEnumerable<T> CreateSet<T>(this Table table, Func<TableRow, T> createInstanceFunction)
         {
-            var enumerable = table.Rows.Select(row =>
+            var pivotTable = new PivotTable(table);
+
+            for (var index = 0; index < table.Rows.Count(); index++)
             {
+                var row = table.Rows[index];
                 var instance = createInstanceFunction(row);
-                LoadInstanceWithPropertyData<T>(table, instance, row);
-                return instance;
-            });
-
-            return enumerable;
-        }
-
-        private static void LoadInstanceWithPropertyData<T>(Table table, T instance, TableRow row)
-        {
-            foreach (var key in GetTypeHandlersForProperties<T>().Keys)
-                SetData(table, instance, row, key);
-        }
+                LoadInstanceWithKeyValuePairs(pivotTable.GetInstanceTable(index), instance);
+                yield return instance;
+            }
+         }
 
         private static bool IsPropertyMatchingToColumnName(PropertyInfo property, string columnName)
         {
@@ -63,66 +73,22 @@ namespace TechTalk.SpecFlow.Assist
                        {
                            {typeof (string), (TableRow row, string id) => row.GetString("Value")},
                            {typeof (int), (TableRow row, string id) => row.GetInt32("Value")},
-                           {typeof (int?), (TableRow row, string id) => row.GetInt32("Value")},
+
+                           {typeof (int?), (TableRow row, string id) => string.IsNullOrEmpty(row["Value"]) ? (int?)null : row.GetInt32("Value")},
                            {typeof (decimal), (TableRow row, string id) => row.GetDecimal("Value")},
-                           {typeof (decimal?), (TableRow row, string id) => row.GetDecimal("Value")},
+                           {typeof (decimal?), (TableRow row, string id) => string.IsNullOrEmpty(row["Value"]) ? (decimal?)null : row.GetDecimal("Value")},
                            {typeof (bool), (TableRow row, string id) => row.GetBoolean("Value")},
-                           {typeof (bool?), (TableRow row, string id) => row.GetBoolean("Value")},
+                           {typeof (bool?), (TableRow row, string id) => row["Value"] == "" ? (bool?)null : row.GetBoolean("Value")},
                            {typeof (DateTime), (TableRow row, string id) => row.GetDateTime("Value")},
-                           {typeof (DateTime?), (TableRow row, string id) => row.GetDateTime("Value")},
+                           {typeof (DateTime?), (TableRow row, string id) => string.IsNullOrEmpty(row["Value"]) ? (DateTime?)null :  row.GetDateTime("Value")},
                            {typeof (Double), (TableRow row, string id) => row.GetDouble("Value")},
-                           {typeof (Double?), (TableRow row, string id) => row.GetDouble("Value")},
+                           {typeof (Double?), (TableRow row, string id) => string.IsNullOrEmpty(row["Value"]) ? (Double?)null : row.GetDouble("Value")},
                            {typeof (Guid), (TableRow row, string id) => row.GetGuid("Value")},
-                           {typeof (Guid?), (TableRow row, string id) => row.GetGuid("Value")},
+                           {typeof (Guid?), (TableRow row, string id) => string.IsNullOrEmpty(row["Value"]) ? (Guid?)null : row.GetGuid("Value")},
                            {typeof (Enum), (TableRow row, string id) => row.GetEnum<T>("Value")},
                            {typeof (char), (TableRow row, string id) => row.GetChar("Value")},
-                           {typeof (char?), (TableRow row, string id) => row.GetChar("Value")}
+                           {typeof (char?), (TableRow row, string id) => string.IsNullOrEmpty(row["Value"]) ? (char?)null : row.GetChar("Value")}
                        };
-        }
-
-        private static Dictionary<Type, Func<TableRow, string, object>> GetTypeHandlersForProperties<T>()
-        {
-            return new Dictionary<Type, Func<TableRow, string, object>>
-                       {
-                           {typeof (string), (TableRow row, string id) => row.GetString(id)},
-                           {typeof (int), (TableRow row, string id) => row.GetInt32(id)},
-                           {typeof (int?), (TableRow row, string id) => row.GetInt32(id)},
-                           {typeof (decimal), (TableRow row, string id) => row.GetDecimal(id)},
-                           {typeof (decimal?), (TableRow row, string id) => row.GetDecimal(id)},
-                           {typeof (bool), (TableRow row, string id) => row.GetBoolean(id)},
-                           {typeof (bool?), (TableRow row, string id) => row.GetBoolean(id)},
-                           {typeof (DateTime), (TableRow row, string id) => row.GetDateTime(id)},
-                           {typeof (DateTime?), (TableRow row, string id) => row.GetDateTime(id)},
-                           {typeof (double), (TableRow row, string id) => row.GetDouble(id)},
-                           {typeof (double?), (TableRow row, string id) => row.GetDouble(id)},
-                           {typeof (Guid), (TableRow row, string id) => row.GetGuid(id)},
-                           {typeof (Guid?), (TableRow row, string id) => row.GetGuid(id)},
-                           {typeof (Enum), (TableRow row, string id) => row.GetEnum<T>(id)},
-                           {typeof (char), (TableRow row, string id) => row.GetChar(id)},
-                           {typeof (char?), (TableRow row, string id) => row.GetChar(id)}
-                       };
-        }
-
-        private static void SetData<T>(Table table, T instance, TableRow row, Type type)
-        {
-            var handler = GetTypeHandlersForProperties<T>()[type];
-
-            var propertiesThatNeedToBeSet = from property in GetPropertiesOfThisType<T>(type)
-                                            from header in table.Header
-                                            where IsPropertyMatchingToColumnName(property, header)
-                                            select new { Header = header, PropertyName = property.Name };
-
-            foreach (var property in propertiesThatNeedToBeSet)
-                if (string.IsNullOrEmpty(row[property.Header]))
-                    instance.SetPropertyValue(property.PropertyName, null);
-                else
-                    instance.SetPropertyValue(property.PropertyName, handler(row, property.Header));
-        }
-
-        private static IEnumerable<PropertyInfo> GetPropertiesOfThisType<T>(Type type)
-        {
-            return typeof(T).GetProperties().ToList()
-                .Where(x => type.IsAssignableFrom(x.PropertyType));
         }
     }
 }

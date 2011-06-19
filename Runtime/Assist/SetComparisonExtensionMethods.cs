@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace TechTalk.SpecFlow.Assist
@@ -16,14 +17,10 @@ namespace TechTalk.SpecFlow.Assist
     {
         private const int MatchNotFound = -1;
         private readonly Table table;
-        private readonly IEnumerable<string> propertiesToTest;
-        private readonly List<T> expectedItems;
 
         public SetComparer(Table table)
         {
             this.table = table;
-            propertiesToTest = GetAllPropertiesToTest(table);
-            expectedItems = GetTheExpectedItems(table);
         }
 
         public void CompareToSet(IEnumerable<T> set)
@@ -80,10 +77,13 @@ namespace TechTalk.SpecFlow.Assist
 
             var listOfMissingItems = new List<int>();
 
-            for (var index = 0; index < expectedItems.Count(); index++)
+            var pivotTable = new PivotTable(table);
+
+            for (var index = 0; index < table.Rows.Count(); index++)
             {
-                var expectedItem = expectedItems[index];
-                var matchIndex = GetTheIndexOfTheMatchingItem(expectedItem, actualItems);
+                var instanceTable = pivotTable.GetInstanceTable(index);
+
+                var matchIndex = GetTheIndexOfTheMatchingItem(instanceTable, actualItems);
 
                 if (matchIndex == MatchNotFound)
                     listOfMissingItems.Add(index + 1);
@@ -98,7 +98,7 @@ namespace TechTalk.SpecFlow.Assist
             throw new ComparisonException(
                 listOfMissingItems.Aggregate(
                     @"The expected items at the following line numbers could not be matched:",
-                    (running, next) => running + "\r\n" + next));
+                    (running, next) => running + Environment.NewLine + next));
         }
 
         private static bool ExpectedItemsCouldNotBeFound(IEnumerable<int> listOfMissingItems)
@@ -111,7 +111,7 @@ namespace TechTalk.SpecFlow.Assist
             actualItems.RemoveAt(matchIndex);
         }
 
-        private int GetTheIndexOfTheMatchingItem(T expectedItem,
+        private static int GetTheIndexOfTheMatchingItem(Table expectedItem,
                                                  IList<T> actualItems)
         {
             for (var actualItemIndex = 0; actualItemIndex < actualItems.Count(); actualItemIndex++)
@@ -124,40 +124,22 @@ namespace TechTalk.SpecFlow.Assist
             return MatchNotFound;
         }
 
-        private bool ThisItemIsAMatch(T expectedItem, T actualItem)
+        private static bool ThisItemIsAMatch(Table expectedItem, T actualItem)
         {
-            foreach (var propertyName in propertiesToTest)
+            try
             {
-                var expectedValue = expectedItem.GetPropertyValue(propertyName);
-                var actualValue = actualItem.GetPropertyValue(propertyName);
-
-                if (TheseValuesDoNotMatch(actualValue, expectedValue))
-                    return false;
+                expectedItem.CompareToInstance(actualItem);
+                return true;
             }
-            return true;
-        }
-
-        private static IEnumerable<string> GetAllPropertiesToTest(Table table)
-        {
-            return table.Header;
-        }
-
-        private static bool TheseValuesDoNotMatch(object actualValue, object expectedValue)
-        {
-            return (actualValue != null && expectedValue == null) ||
-                   (actualValue == null && expectedValue != null) ||
-                   ((actualValue != null) &&
-                    (actualValue.ToString() != expectedValue.ToString()));
+            catch
+            {
+                return false;
+            }
         }
 
         private static List<T> GetTheActualItems(IEnumerable<T> set)
         {
             return set.ToList();
-        }
-
-        private static List<T> GetTheExpectedItems(Table table)
-        {
-            return table.CreateSet<T>().ToList();
         }
 
         private void AssertThatAllColumnsInTheTableMatchToPropertiesOnTheType()
@@ -171,7 +153,7 @@ namespace TechTalk.SpecFlow.Assist
             if (propertiesThatDoNotExist.Any())
                 throw new ComparisonException(
                     propertiesThatDoNotExist.Aggregate(@"The following fields do not exist:",
-                                                       (running, next) => running + string.Format("\r\n{0}", next)));
+                                                       (running, next) => running + string.Format("{0}{1}", Environment.NewLine, next)));
         }
     }
 }

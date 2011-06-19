@@ -10,6 +10,8 @@ using System.Text.RegularExpressions;
 using Microsoft.CSharp;
 using TechTalk.SpecFlow.Configuration;
 using TechTalk.SpecFlow.Generator.Configuration;
+using TechTalk.SpecFlow.Generator.Interfaces;
+using TechTalk.SpecFlow.Generator.Project;
 using TechTalk.SpecFlow.Generator.UnitTestConverter;
 using TechTalk.SpecFlow.Generator.UnitTestProvider;
 using TechTalk.SpecFlow.Parser;
@@ -18,6 +20,7 @@ using TechTalk.SpecFlow.Utils;
 
 namespace TechTalk.SpecFlow.Generator
 {
+    [Obsolete("Use ITestGeneratorFactory / ITestGenerator instead")]
     public class SpecFlowGenerator
     {
         private readonly SpecFlowProject project;
@@ -27,94 +30,24 @@ namespace TechTalk.SpecFlow.Generator
             this.project = project;
         }
 
-        public void GenerateCSharpTestFile(SpecFlowFeatureFile featureFile, TextWriter outputWriter)
+        public void GenerateCSharpTestFile(FeatureFileInput featureFile, TextWriter outputWriter)
         {
             var codeProvider = new CSharpCodeProvider();
             GenerateTestFile(featureFile, codeProvider, outputWriter);
         }
 
-        private void GenerateTestFile(SpecFlowFeatureFile featureFile, CodeDomProvider codeProvider, TextWriter outputWriter)
+        private void GenerateTestFile(FeatureFileInput featureFile, CodeDomProvider codeProvider, TextWriter outputWriter)
         {
-            using(var reader = new StreamReader(featureFile.GetFullPath(project)))
+            using(var reader = new StreamReader(featureFile.GetFullPath(project.ProjectSettings)))
             {
                 GenerateTestFile(featureFile, codeProvider, reader, outputWriter);
             }
         }
 
-        private class HackedWriter : TextWriter
+
+        public void GenerateTestFile(FeatureFileInput featureFile, CodeDomProvider codeProvider, TextReader inputReader, TextWriter outputWriter)
         {
-            TextWriter innerWriter;
-            private bool trimSpaces = false;
-
-            public HackedWriter(TextWriter innerWriter)
-            {
-                this.innerWriter = innerWriter;
-            }
-
-            public override void Write(char[] buffer, int index, int count)
-            {
-                Write(new string(buffer, index, count));
-            }
-
-            public override void Write(char value)
-            {
-                Write(value.ToString());
-            }
-
-            public override void Write(string value)
-            {
-                if (trimSpaces)
-                {
-                    value = value.TrimStart(' ', '\t');
-                    if (value == string.Empty)
-                        return;
-                    trimSpaces = false;
-                }
-
-                innerWriter.Write(value);
-            }
-
-            public override Encoding Encoding
-            {
-                get { return innerWriter.Encoding; }
-            }
-
-            static private readonly Regex indentNextRe = new Regex(@"^[\s\/\']*#indentnext (?<ind>\d+)\s*$");
-
-            public override void WriteLine(string text)
-            {
-                var match = indentNextRe.Match(text);
-                if (match.Success)
-                {
-                    Write(new string(' ', int.Parse(match.Groups["ind"].Value)));
-                    trimSpaces = true;
-                    return;
-                }
-
-                base.WriteLine(text);
-            }
-
-            public override string ToString()
-            {
-                return innerWriter.ToString();
-            }
-
-            public override void Flush()
-            {
-                innerWriter.Flush();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                    innerWriter.Dispose();
-            }
-        }
-
-
-        public void GenerateTestFile(SpecFlowFeatureFile featureFile, CodeDomProvider codeProvider, TextReader inputReader, TextWriter outputWriter)
-        {
-            outputWriter = new HackedWriter(outputWriter);
+            outputWriter = new IndentProcessingWriter(outputWriter);
 
             CodeDomHelper codeDomHelper = new CodeDomHelper(codeProvider);
 
@@ -130,33 +63,34 @@ namespace TechTalk.SpecFlow.Generator
             outputWriter.Flush();
         }
 
-        public CodeNamespace GenerateTestFileCode(SpecFlowFeatureFile featureFile, TextReader inputReader, CodeDomProvider codeProvider, CodeDomHelper codeDomHelper)
+        public CodeNamespace GenerateTestFileCode(FeatureFileInput featureFile, TextReader inputReader, CodeDomProvider codeProvider, CodeDomHelper codeDomHelper)
         {
             string targetNamespace = GetTargetNamespace(featureFile);
 
-            SpecFlowLangParser parser = new SpecFlowLangParser(project.GeneratorConfiguration.FeatureLanguage);
-            Feature feature = parser.Parse(inputReader, featureFile.GetFullPath(project));
+            SpecFlowLangParser parser = new SpecFlowLangParser(project.Configuration.GeneratorConfiguration.FeatureLanguage);
+            Feature feature = parser.Parse(inputReader, featureFile.GetFullPath(project.ProjectSettings));
 
-            IUnitTestGeneratorProvider generatorProvider = ConfigurationServices.CreateInstance<IUnitTestGeneratorProvider>(project.GeneratorConfiguration.GeneratorUnitTestProviderType);
+            IUnitTestGeneratorProvider generatorProvider = ConfigurationServices.CreateInstance<IUnitTestGeneratorProvider>(project.Configuration.GeneratorConfiguration.GeneratorUnitTestProviderType);
             codeDomHelper.InjectIfRequired(generatorProvider);
 
-            ISpecFlowUnitTestConverter testConverter = new SpecFlowUnitTestConverter(generatorProvider, codeDomHelper, project.GeneratorConfiguration.AllowDebugGeneratedFiles, project.GeneratorConfiguration.AllowRowTests);
+            ISpecFlowUnitTestConverter testConverter = new SpecFlowUnitTestConverter(generatorProvider, codeDomHelper, project.Configuration.GeneratorConfiguration.AllowDebugGeneratedFiles, project.Configuration.GeneratorConfiguration.AllowRowTests);
 
             var codeNamespace = testConverter.GenerateUnitTestFixture(feature, null, targetNamespace);
+
             return codeNamespace;
         }
 
-        private string GetTargetNamespace(SpecFlowFeatureFile featureFile)
+        private string GetTargetNamespace(FeatureFileInput featureFile)
         {
             if (!string.IsNullOrEmpty(featureFile.CustomNamespace))
                 return featureFile.CustomNamespace;
 
-            if (string.IsNullOrEmpty(project.DefaultNamespace))
+            if (string.IsNullOrEmpty(project.ProjectSettings.DefaultNamespace))
                 return null;
 
-            string targetNamespace = project.DefaultNamespace;
-            string projectFolder = project.ProjectFolder;
-            string sourceFileFolder = Path.GetDirectoryName(featureFile.GetFullPath(project));
+            string targetNamespace = project.ProjectSettings.DefaultNamespace;
+            string projectFolder = project.ProjectSettings.ProjectFolder;
+            string sourceFileFolder = Path.GetDirectoryName(featureFile.GetFullPath(project.ProjectSettings));
             if (sourceFileFolder.StartsWith(sourceFileFolder, StringComparison.InvariantCultureIgnoreCase))
             {
                 string extraFolders = sourceFileFolder.Substring(projectFolder.Length);
@@ -228,7 +162,7 @@ namespace TechTalk.SpecFlow.Generator
             }
         }
 
-        private Version GetGeneratedFileSpecFlowVersion(StreamReader reader)
+        public static Version GetGeneratedFileSpecFlowVersion(TextReader reader)
         {
             try
             {

@@ -49,10 +49,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Runtime\Configuration\ConfigDefaults.cs">
+    <Compile Include="..\lib\MiniDi\MiniDi.cs">
+      <Link>MiniDi\MiniDi.cs</Link>
+    </Compile>
+    <Compile Include="..\Runtime\PlatformSpecific\ConfigDefaults.cs">
       <Link>Configuration\ConfigDefaults.cs</Link>
     </Compile>
-    <Compile Include="..\Runtime\Configuration\ConfigurationSectionHandler.cs">
+    <Compile Include="..\Runtime\PlatformSpecific\ConfigurationSectionHandler.cs">
       <Link>Configuration\ConfigurationSectionHandler.cs</Link>
     </Compile>
     <Compile Include="..\Runtime\Configuration\ConfigurationServices.cs">
@@ -64,20 +67,66 @@
     <Compile Include="..\Runtime\StringExtensions.cs">
       <Link>StringExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Runtime\Tracing\DefaultListener.cs">
+      <Link>Tracing\DefaultListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Runtime\Tracing\ITraceListener.cs">
+      <Link>Tracing\ITraceListener.cs</Link>
+    </Compile>
+    <Compile Include="..\Runtime\Tracing\NullListener.cs">
+      <Link>Tracing\NullListener.cs</Link>
+    </Compile>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\VersionInfo.cs">
-      <Link>VersionInfo.cs</Link>
+      <Link>Properties\VersionInfo.cs</Link>
     </Compile>
     <Compile Include="BatchGenerator.cs" />
     <Compile Include="Configuration\GeneratorConfiguration.cs" />
     <Compile Include="Configuration\GeneratorConfigurationReader.cs" />
-    <Compile Include="Configuration\MsBuildProjectReader.cs" />
+    <Compile Include="Configuration\ISpecFlowConfigurationReader.cs" />
+    <Compile Include="ITestUpToDateChecker.cs" />
+    <Compile Include="Project\AppDomainProjectReference.cs" />
+    <Compile Include="Project\FileProjectReference.cs" />
+    <Compile Include="Configuration\IProjectReference.cs" />
+    <Compile Include="Project\ISpecFlowProjectReader.cs" />
+    <Compile Include="Project\MsBuildProjectReader.cs" />
     <Compile Include="Configuration\RuntimeConfiguration.cs" />
     <Compile Include="Configuration\RuntimeConfigurationReader.cs" />
-    <Compile Include="Configuration\SpecFlowProject.cs" />
+    <Compile Include="Configuration\RuntimeSpecFlowProjectConfigurationLoader.cs" />
+    <Compile Include="RemotableGeneratorClass.cs" />
+    <Compile Include="TestGeneratorException.cs" />
+    <Compile Include="Project\SpecFlowProject.cs" />
+    <Compile Include="Configuration\SpecFlowProjectConfiguration.cs" />
+    <Compile Include="Configuration\SpecFlowProjectConfigurationLoader.cs" />
+    <Compile Include="ErrorHandlingTestGenerator.cs" />
+    <Compile Include="FeatureFileInputExtensions.cs" />
+    <Compile Include="GeneratorContainerBuilder.cs" />
+    <Compile Include="IndentProcessingWriter.cs" />
+    <Compile Include="Interfaces\FeatureFileInput.cs" />
+    <Compile Include="Interfaces\GenerationSettings.cs" />
+    <Compile Include="GenerationTargetLanguage.cs" />
+    <Compile Include="GenerationTargetPlatform.cs" />
+    <Compile Include="Interfaces\ITestGenerator.cs" />
+    <Compile Include="Interfaces\ITestGeneratorFactory.cs" />
+    <Compile Include="Interfaces\ProjectPlatformSettings.cs" />
+    <Compile Include="Interfaces\ProjectSettings.cs" />
+    <Compile Include="Interfaces\SpecFlowConfigurationHolder.cs" />
+    <Compile Include="Interfaces\TestGenerationError.cs" />
+    <Compile Include="Interfaces\TestGeneratorFactoryAttribute.cs" />
+    <Compile Include="Interfaces\TestGeneratorResult.cs" />
+    <Compile Include="Configuration\ISpecFlowProjectConfigurationLoader.cs" />
+    <Compile Include="ITestHeaderWriter.cs" />
+    <Compile Include="TestHeaderWriter.cs" />
+    <Compile Include="TestUpToDateChecker.cs" />
+    <Compile Include="Tracing\TextWriterTraceListener.cs" />
     <Compile Include="UnitTestConverter\ISpecFlowUnitTestConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SpecFlowGenerator.cs" />
     <Compile Include="SpecFlowUnitTestConverter.cs" />
+    <Compile Include="TestGenerator.cs" />
+    <Compile Include="TestGeneratorFactory.cs" />
     <Compile Include="UnitTestProvider\MsTestSilverlightGeneratorProvider.cs" />
     <Compile Include="UnitTestProvider\MbUnitTestGeneratorProvider.cs" />
     <Compile Include="UnitTestProvider\MsTest2010GeneratorProvider.cs" />
@@ -97,7 +146,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Compatibility\" />
+    <Folder Include="PlatformCompatibility\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

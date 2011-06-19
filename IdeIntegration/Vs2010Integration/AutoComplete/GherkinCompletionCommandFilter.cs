@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.OLE.Interop;
@@ -7,7 +8,11 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
+using TechTalk.SpecFlow.IdeIntegration.Options;
+using TechTalk.SpecFlow.Parser;
 using TechTalk.SpecFlow.Parser.Gherkin;
+using TechTalk.SpecFlow.Vs2010Integration.LanguageService;
+using TechTalk.SpecFlow.Vs2010Integration.Options;
 
 namespace TechTalk.SpecFlow.Vs2010Integration.AutoComplete
 {
@@ -23,11 +28,14 @@ namespace TechTalk.SpecFlow.Vs2010Integration.AutoComplete
         ICompletionBroker CompletionBroker = null;
 
         [Import]
-        IGherkinProcessorServices GherkinProcessorServices = null;
+        IIntegrationOptionsProvider IntegrationOptionsProvider = null;
+
+        [Import]
+        IGherkinLanguageServiceFactory GherkinLanguageServiceFactory = null;
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
-            if (!GherkinProcessorServices.GetOptions().EnableIntelliSense)
+            if (!IntegrationOptionsProvider.GetOptions().EnableIntelliSense)
                 return;
 
             IWpfTextView view = AdaptersFactory.GetWpfTextView(textViewAdapter);
@@ -35,7 +43,9 @@ namespace TechTalk.SpecFlow.Vs2010Integration.AutoComplete
             if (view == null)
                 return;
 
-            var commandFilter = new GherkinCompletionCommandFilter(view, CompletionBroker, GherkinProcessorServices);
+            var languageService = GherkinLanguageServiceFactory.GetLanguageService(view.TextBuffer);
+
+            var commandFilter = new GherkinCompletionCommandFilter(view, CompletionBroker, languageService);
 
             IOleCommandTarget next;
             textViewAdapter.AddCommandFilter(commandFilter, out next);
@@ -45,27 +55,32 @@ namespace TechTalk.SpecFlow.Vs2010Integration.AutoComplete
 
     internal class GherkinCompletionCommandFilter : CompletionCommandFilter
     {
-        public GherkinCompletionCommandFilter(IWpfTextView textView, ICompletionBroker broker, IGherkinProcessorServices gherkinProcessorServices) : base(textView, broker)
+        private readonly GherkinLanguageService languageService;
+
+        public GherkinCompletionCommandFilter(IWpfTextView textView, ICompletionBroker broker, GherkinLanguageService languageService) : base(textView, broker)
         {
-            GherkinProcessorServices = gherkinProcessorServices;
+            this.languageService = languageService;
         }
 
-        public IGherkinProcessorServices GherkinProcessorServices { get; private set; }
-        
         /// <summary>
         /// Displays completion after typing a space after a step keyword
         /// </summary>
-        protected override bool ShouldCompletionBeDiplayed(SnapshotPoint caret)
+        protected override bool ShouldCompletionBeDiplayed(SnapshotPoint caret, char? ch)
         {
-            var lineStart = caret.GetContainingLine().Start.Position;
-            var lineBeforeCaret = caret.Snapshot.GetText(lineStart, caret.Position - lineStart);
+            if (ch == null)
+                return true;
 
-            if (lineBeforeCaret.Length > 0 &&
-                char.IsWhiteSpace(lineBeforeCaret[lineBeforeCaret.Length - 1]))
+            if (GherkinStepCompletionSource.IsKeywordCompletion(caret))
             {
-                string keyword = lineBeforeCaret.Substring(0, lineBeforeCaret.Length - 1).TrimStart();
-                var languageService = GherkinProcessorServices.GetLanguageService(caret.Snapshot.TextBuffer);
-                return languageService.IsStepKeyword(keyword);
+                return GherkinStepCompletionSource.IsKeywordPrefix(caret, languageService);
+//                var fileScope = languageService.GetFileScope();
+//                GherkinDialect dialect = fileScope != null ? fileScope.GherkinDialect : languageService.ProjectScope.GherkinDialectServices.GetDefaultDialect();
+
+                return true;
+            }
+            if (GherkinStepCompletionSource.IsStepLine(caret, languageService))
+            {
+                return ch == ' ' && GherkinStepCompletionSource.IsKeywordPrefix(caret - 1, languageService); 
             }
 
             return false;

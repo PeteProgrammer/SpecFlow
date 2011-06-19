@@ -1,147 +1,102 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
+using System.Xml;
 using EnvDTE;
-using Microsoft.VisualStudio;
+using TechTalk.SpecFlow.Generator;
 using TechTalk.SpecFlow.Generator.Configuration;
+using TechTalk.SpecFlow.Generator.Interfaces;
+using TechTalk.SpecFlow.IdeIntegration.Generator;
+using TechTalk.SpecFlow.Vs2010Integration.Generator;
+using TechTalk.SpecFlow.Vs2010Integration.LanguageService;
+using TechTalk.SpecFlow.Vs2010Integration.Tracing;
+using TechTalk.SpecFlow.Vs2010Integration.Utils;
+using VSLangProj;
 
 namespace TechTalk.SpecFlow.Vs2010Integration
 {
-    internal class DteProjectReader
+    internal class VsProjectReference : IProjectReference
     {
-        private static bool IsProjectSupported(Project project)
+        public Project Project { get; private set; }
+
+        public VsProjectReference(Project project)
         {
-            return
-                project.FullName.EndsWith(".csproj") ||
-                project.FullName.EndsWith(".vbproj");
-            //                kind.Equals(vsContextGuids.vsContextGuidVCSProject, StringComparison.InvariantCultureIgnoreCase) ||
-            //                kind.Equals(vsContextGuids.vsContextGuidVBProject, StringComparison.InvariantCultureIgnoreCase);
+            Project = project;
         }
 
-        public static SpecFlowProject LoadSpecFlowProjectFromDteProject(Project project)
+        static public VsProjectReference AssertVsProjectReference(IProjectReference projectReference)
         {
-            if (project == null || !IsProjectSupported(project))
-                return null;
+            return (VsProjectReference)projectReference; //TODO: better error handling
+        }
+    }
 
+    internal class VsProjectScopeReference : VsProjectReference
+    {
+        public VsProjectScope VsProjectScope { get; set; }
+
+        public VsProjectScopeReference(VsProjectScope vsProjectScope) : base(vsProjectScope.Project)
+        {
+            VsProjectScope = vsProjectScope;
+        }
+
+        static public VsProjectScopeReference AssertVsProjectScopeReference(IProjectReference projectReference)
+        {
+            return (VsProjectScopeReference)projectReference; //TODO: better error handling
+        }
+    }
+
+    internal class VsSpecFlowProjectConfigurationLoader : SpecFlowProjectConfigurationLoader
+    {
+        protected override Version GetGeneratorVersion(IProjectReference projectReference)
+        {
+            var vsProjectScopeReference = VsProjectScopeReference.AssertVsProjectScopeReference(projectReference);
+
+            //HACK: temporary solution: we use the SpecFlow runtime version as generator version, to avoid unwanted popups reporting outdated tests
             try
             {
-                return LoadSpecFlowProjectFromDteProjectInternal(project);
+                VSProject vsProject = (VSProject) vsProjectScopeReference.Project.Object;
+                var specFlowRef =
+                    vsProject.References.Cast<Reference>().FirstOrDefault(r => r.Name == "TechTalk.SpecFlow");
+                if (specFlowRef != null)
+                    return new Version(specFlowRef.Version);
             }
-            catch
+            catch(Exception exception)
             {
-                return null;
+                Debug.WriteLine(exception, "VsSpecFlowProjectConfigurationLoader.GetGeneratorVersion");
             }
+
+            return vsProjectScopeReference.VsProjectScope.GeneratorServices.GetGeneratorVersion();
+        }
+    }
+
+    internal class VsSpecFlowConfigurationReader : ISpecFlowConfigurationReader
+    {
+        public SpecFlowConfigurationHolder ReadConfiguration(IProjectReference projectReference)
+        {
+            var vsProjectReference = VsProjectReference.AssertVsProjectReference(projectReference);
+            ProjectItem projectItem = VsxHelper.FindProjectItemByProjectRelativePath(vsProjectReference.Project, "app.config");
+            if (projectItem == null)
+                return new SpecFlowConfigurationHolder();
+
+            string configFileContent = VsxHelper.GetFileContent(projectItem);
+            return GetConfigurationHolderFromFileContent(configFileContent);
         }
 
-        private static SpecFlowProject LoadSpecFlowProjectFromDteProjectInternal(Project project)
+        private static SpecFlowConfigurationHolder GetConfigurationHolderFromFileContent(string configFileContent)
         {
-            string projectFolder = Path.GetDirectoryName(project.FullName);
-
-            SpecFlowProject specFlowProject = new SpecFlowProject();
-            specFlowProject.ProjectFolder = projectFolder;
-            specFlowProject.ProjectName = Path.GetFileNameWithoutExtension(project.FullName);
-            specFlowProject.AssemblyName = project.Properties.Item("AssemblyName").Value as string;
-            specFlowProject.DefaultNamespace = project.Properties.Item("DefaultNamespace").Value as string;
-
-            foreach (ProjectItem projectItem in VsxHelper.GetAllProjectItem(project).Where(IsPhysicalFile))
+            XmlDocument configDocument;
+            try
             {
-                var fileName = GetRelativePath(GetFileName(projectItem), projectFolder);
+                configDocument = new XmlDocument();
+                configDocument.LoadXml(configFileContent);
 
-                var extension = Path.GetExtension(fileName);
-                if (extension.Equals(".feature", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    var featureFile = new SpecFlowFeatureFile(fileName);
-                    var ns = projectItem.Properties.Item("CustomToolNamespace").Value as string;
-                    if (!String.IsNullOrEmpty(ns))
-                        featureFile.CustomNamespace = ns;
-                    specFlowProject.FeatureFiles.Add(featureFile);
-                }
-
-                if (Path.GetFileName(fileName).Equals("app.config", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    string configFileContent = GetFileContent(projectItem);
-                    GeneratorConfigurationReader.UpdateConfigFromFileContent(specFlowProject.GeneratorConfiguration, configFileContent);
-                    RuntimeConfigurationReader.UpdateConfigFromFileContent(specFlowProject.RuntimeConfiguration, configFileContent);
-                }
+                return new SpecFlowConfigurationHolder(configDocument.SelectSingleNode("/configuration/specFlow"));
             }
-            return specFlowProject;
-        }
-
-        private static bool IsPhysicalFile(ProjectItem projectItem)
-        {
-            return string.Equals(projectItem.Kind, VSConstants.GUID_ItemType_PhysicalFile.ToString("B"), StringComparison.InvariantCultureIgnoreCase);
-        }
-
-        static public string GetFileContent(ProjectItem projectItem)
-        {
-            if (projectItem.get_IsOpen(EnvDTE.Constants.vsViewKindAny))
+            catch (Exception ex)
             {
-                TextDocument textDoc = (TextDocument)projectItem.Document.Object("TextDocument");
-                EditPoint start = textDoc.StartPoint.CreateEditPoint();
-                return start.GetText(textDoc.EndPoint);
+                Debug.WriteLine(ex, "Config load error");
+                return new SpecFlowConfigurationHolder();
             }
-            else
-            {
-                using (TextReader file = new StreamReader(GetFileName(projectItem)))
-                {
-                    return file.ReadToEnd();
-                }
-            }
-        }
-
-        private static string GetFileName(ProjectItem projectItem)
-        {
-            return projectItem.get_FileNames(1);
-        }
-
-        public static string GetRelativePath(string path, string basePath)
-        {
-            path = Path.GetFullPath(path);
-            basePath = Path.GetFullPath(basePath);
-            if (string.Equals(path, basePath, StringComparison.OrdinalIgnoreCase))
-                return "."; // the "this folder"
-
-            if (path.StartsWith(basePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-                return path.Substring(basePath.Length + 1);
-
-            //handle different drives
-            string pathRoot = Path.GetPathRoot(path);
-            if (!string.Equals(pathRoot, Path.GetPathRoot(basePath), StringComparison.OrdinalIgnoreCase))
-                return path;
-
-            //handle ".." pathes
-            string[] pathParts = path.Substring(pathRoot.Length).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            string[] basePathParts = basePath.Substring(pathRoot.Length).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            int commonFolderCount = 0;
-            while (commonFolderCount < pathParts.Length && commonFolderCount < basePathParts.Length &&
-                   string.Equals(pathParts[commonFolderCount], basePathParts[commonFolderCount], StringComparison.OrdinalIgnoreCase))
-                commonFolderCount++;
-
-            StringBuilder result = new StringBuilder();
-            for (int i = 0; i < basePathParts.Length - commonFolderCount; i++)
-            {
-                result.Append("..");
-                result.Append(Path.DirectorySeparatorChar);
-            }
-
-            if (pathParts.Length - commonFolderCount == 0)
-                return result.ToString().TrimEnd(Path.DirectorySeparatorChar);
-
-            result.Append(string.Join(Path.DirectorySeparatorChar.ToString(), pathParts, commonFolderCount, pathParts.Length - commonFolderCount));
-            return result.ToString();
-        }
-
-        private static string DumpProperties(ProjectItem projectItem)
-        {
-            StringBuilder result = new StringBuilder();
-            foreach (Property property in projectItem.Properties)
-            {
-                result.AppendLine(property.Name + "=" + property.Value);
-            }
-            return result.ToString();
         }
     }
 }

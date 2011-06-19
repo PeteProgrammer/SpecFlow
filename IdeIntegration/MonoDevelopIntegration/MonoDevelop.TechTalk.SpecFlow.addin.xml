@@ -6,7 +6,7 @@
        url         = "http://www.specflow.org" 
        description = "Integrates SpecFlow into the MonoDevelop IDE." 
        category    = "IDE extensions" 
-       version     = "1.5.0.0">
+       version     = "1.6.0.0">
 
 	<Runtime>
 		<Import assembly="Gherkin.dll"/>
@@ -16,11 +16,12 @@
 		<Import assembly="IKVM.Runtime.dll"/>
 		<Import assembly="TechTalk.SpecFlow.Generator.dll"/>
 		<Import assembly="TechTalk.SpecFlow.Parser.dll"/>
+		<Import assembly="TechTalk.SpecFlow.Utils.dll"/>
 	</Runtime>
 	
 	<Dependencies>
-		<Addin id="Core" version="2.4"/>
-		<Addin id="Ide" version="2.4"/>
+		<Addin id="Core" version="2.6"/>
+		<Addin id="Ide" version="2.6"/>
 	</Dependencies>
 	
 	<Extension path="/MonoDevelop/Core/MimeTypes">

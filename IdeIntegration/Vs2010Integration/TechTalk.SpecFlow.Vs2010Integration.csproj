@@ -53,21 +53,7 @@
       <EmbedInteropTypes>False</EmbedInteropTypes>
       <HintPath>..\..\lib\VS2010SDK\EnvDTE80.dll</HintPath>
     </Reference>
-    <Reference Include="Gherkin">
-      <HintPath>..\..\lib\gherkin\Gherkin.dll</HintPath>
-    </Reference>
-    <Reference Include="IKVM.OpenJDK.Core">
-      <HintPath>..\..\lib\gherkin\IKVM.OpenJDK.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="IKVM.OpenJDK.Security">
-      <HintPath>..\..\lib\gherkin\IKVM.OpenJDK.Security.dll</HintPath>
-    </Reference>
-    <Reference Include="IKVM.OpenJDK.Text">
-      <HintPath>..\..\lib\gherkin\IKVM.OpenJDK.Text.dll</HintPath>
-    </Reference>
-    <Reference Include="IKVM.Runtime">
-      <HintPath>..\..\lib\gherkin\IKVM.Runtime.dll</HintPath>
-    </Reference>
+    <Reference Include="Microsoft.VisualStudio.ComponentModelHost, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.CoreUtility, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\VS2010SDK\v4.0\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
@@ -140,10 +126,18 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.CoreEx, Version=1.0.2838.104, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\RX\System.CoreEx.dll</HintPath>
+    </Reference>
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Reactive, Version=1.0.2838.104, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\RX\System.Reactive.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml" />
@@ -165,6 +159,21 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\VersionInfo.cs">
+      <Link>Properties\VersionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Runtime\ProgrammingLanguage.cs">
+      <Link>BindingSkeletons\ProgrammingLanguage.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Runtime\StringExtensions.cs">
+      <Link>BindingSkeletons\StringExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Runtime\Table.cs">
+      <Link>Bindings\Table.cs</Link>
+    </Compile>
     <Compile Include="..\Vs2008Integration\BaseCodeGenerator.cs">
       <Link>SingleFileGenerator\BaseCodeGenerator.cs</Link>
     </Compile>
@@ -173,22 +182,80 @@
     </Compile>
     <Compile Include="AutoComplete\CompletionCommandFilter.cs" />
     <Compile Include="AutoComplete\GherkinCompletionCommandFilter.cs" />
-    <Compile Include="AutoComplete\CompletionSource.cs" />
-    <Compile Include="GherkinProcessorServices.cs" />
+    <Compile Include="AutoComplete\GherkinStepCompletionSource.cs" />
+    <Compile Include="AutoComplete\HierarchicalCompletionSet.cs" />
+    <Compile Include="BindingSkeletons\IStepDefinitionSkeletonProvider.cs" />
+    <Compile Include="BindingSkeletons\IBindingSkeletonProviderFactory.cs" />
+    <Compile Include="BindingSkeletons\StepDefinitionSkeletonProviderBase.cs" />
+    <Compile Include="BindingSkeletons\StepDefinitionSkeletonProviderCS.cs" />
+    <Compile Include="BindingSkeletons\StepDefinitionSkeletonProviderVB.cs" />
+    <Compile Include="Bindings\BindingMatch.cs" />
+    <Compile Include="Bindings\BindingMatchService.cs" />
+    <Compile Include="Bindings\IBindingRegistry.cs" />
+    <Compile Include="Bindings\Reflection\BindingMethodComparer.cs" />
+    <Compile Include="Bindings\Reflection\BindingReflectionExtensions.cs" />
+    <Compile Include="Bindings\BindingScope.cs" />
+    <Compile Include="Bindings\BindingType.cs" />
+    <Compile Include="Bindings\Reflection\IBindingMethod.cs" />
+    <Compile Include="Bindings\Reflection\IBindingParameter.cs" />
+    <Compile Include="Bindings\Reflection\IBindingType.cs" />
+    <Compile Include="Bindings\StepBinding.cs" />
+    <Compile Include="Bindings\StepDefinitionKeyword.cs" />
+    <Compile Include="Bindings\StepInstance.cs" />
+    <Compile Include="Bindings\StepScope.cs" />
+    <Compile Include="EditorCommands\EditorCommandFilter.cs" />
+    <Compile Include="EditorCommands\EditorCommands.cs" />
+    <Compile Include="LanguageService\BindingFilesTracker.cs" />
+    <Compile Include="LanguageService\ProjectFeatureFilesTracker.cs" />
+    <Compile Include="LanguageService\ProjectFilesTracker.cs" />
+    <Compile Include="LanguageService\VsBindingMethod.cs" />
+    <Compile Include="LanguageService\VsStepSuggestionBindingCollector.cs" />
+    <Compile Include="LanguageService\VsStepSuggestionProvider.cs" />
     <Compile Include="DteProjectReader.cs" />
     <Compile Include="Guids.cs" />
-    <Compile Include="IGherkinProcessorServices.cs" />
+    <Compile Include="LanguageService\GherkinBufferServiceManager.cs" />
+    <Compile Include="LanguageService\NoProjectScope.cs" />
+    <Compile Include="LanguageService\VsProjectScope.cs" />
+    <Compile Include="Generator\VsGeneratorServices.cs" />
+    <Compile Include="StepSuggestions\BoundStepSuggestions.cs" />
+    <Compile Include="StepSuggestions\INativeSuggestionItemFactory.cs" />
+    <Compile Include="StepSuggestions\IStepSuggestion.cs" />
+    <Compile Include="StepSuggestions\StepInstance.cs" />
+    <Compile Include="StepSuggestions\StepInstanceTemplate.cs" />
+    <Compile Include="StepSuggestions\StepSuggestionList.cs" />
+    <Compile Include="StepSuggestions\StepSuggestionProvider.cs" />
+    <Compile Include="Utils\RegexDictionary.cs" />
+    <Compile Include="Utils\StringLiteralHelper.cs" />
+    <Compile Include="Utils\VsProjectFileTracker.cs" />
+    <Compile Include="Utils\DteWithEvents.cs" />
+    <Compile Include="Utils\EnumerableExtensions.cs" />
+    <Compile Include="LanguageService\GherkinFileBlockBuilder.cs" />
+    <Compile Include="LanguageService\GherkinFileScope.cs" />
+    <Compile Include="LanguageService\GherkinFileScopeChange.cs" />
+    <Compile Include="LanguageService\GherkinFileScopeExtensions.cs" />
+    <Compile Include="LanguageService\GherkinLanguageService.cs" />
+    <Compile Include="LanguageService\GherkinLanguageServiceFactory.cs" />
+    <Compile Include="LanguageService\GherkinScopeAnalyzer.cs" />
+    <Compile Include="LanguageService\GherkinTextBufferChange.cs" />
+    <Compile Include="LanguageService\GherkinTextBufferParser.cs" />
+    <Compile Include="LanguageService\GherkinTextBufferParserListener.cs" />
+    <Compile Include="LanguageService\GherkinTextBufferPartialParserListener.cs" />
+    <Compile Include="LanguageService\IGherkinFileScope.cs" />
+    <Compile Include="LanguageService\GherkinProcessingScheduler.cs" />
+    <Compile Include="LanguageService\ProjectScope.cs" />
+    <Compile Include="LanguageService\ProjectScopeFactory.cs" />
+    <Compile Include="LanguageService\ShiftedGherkinFileBlock.cs" />
+    <Compile Include="Utils\ObservableExtensions.cs" />
+    <Compile Include="Utils\SynchronizationHelper.cs" />
     <Compile Include="Options\OptionsPageGeneral.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Options\IntegrationOptionsProvider.cs" />
-    <Compile Include="Options\IntegrationOptions.cs" />
     <Compile Include="Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="SingleFileGenerator\SpecFlowSingleFileGeneratorBase.cs" />
     <Compile Include="SpecFlowPackage.cs" />
     <Compile Include="Tracing\IVisualStudioTracer.cs" />
     <Compile Include="Tracing\OutputWindow\IOutputWindowDefinitionMetadata.cs" />
@@ -201,27 +268,23 @@
     <Compile Include="Tracing\OutputWindowDefinitions.cs" />
     <Compile Include="Tracing\OutputWindow\VsOutputWindowPaneAdapter.cs" />
     <Compile Include="Tracing\VisualStudioTracer.cs" />
-    <Compile Include="VsxHelper.cs" />
+    <Compile Include="Utils\VsxHelper.cs" />
     <Compile Include="..\Vs2008Integration\CodeGeneratorRegistrationAttribute.cs">
       <Link>SingleFileGenerator\CodeGeneratorRegistrationAttribute.cs</Link>
     </Compile>
     <None Include="..\Vs2008Integration\SingleFileGeneratorSupportRegistrationAttribute.cs">
       <Link>SingleFileGenerator\SingleFileGeneratorSupportRegistrationAttribute.cs</Link>
     </None>
-    <Compile Include="GherkinFileEditor\EditorExtensionProviderBase.cs" />
     <Compile Include="GherkinFileEditor\GherkinFileClassifierFormats.cs" />
     <Compile Include="GherkinFileEditor\GherkinFileClassificationDefinition.cs" />
     <Compile Include="GherkinFileEditor\GherkinFileClassifier.cs" />
     <Compile Include="GherkinFileEditor\GherkinFileEditorClassifications.cs" />
-    <Compile Include="GherkinFileEditor\GherkinFileEditorInfo.cs" />
-    <Compile Include="GherkinFileEditor\GherkinFileEditorParser.cs" />
-    <Compile Include="GherkinFileEditor\GherkinFileEditorParserListener.cs" />
     <Compile Include="GherkinFileEditor\GherkinFileOutliningTagger.cs" />
-    <Compile Include="GherkinFileEditor\PartialListeningDoneException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SingleFileGenerator\SpecFlowSingleFileGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\AutoCompleteIcons.psd" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
@@ -241,6 +304,16 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Resource Include="Resources\autocomplete-g-b.png" />
+    <Resource Include="Resources\autocomplete-g-t.png" />
+    <Resource Include="Resources\autocomplete-g.png" />
+    <Resource Include="Resources\autocomplete-t-b.png" />
+    <Resource Include="Resources\autocomplete-t-t.png" />
+    <Resource Include="Resources\autocomplete-t.png" />
+    <Resource Include="Resources\autocomplete-w-b.png" />
+    <Resource Include="Resources\autocomplete-w-t.png" />
+    <Resource Include="Resources\autocomplete-w.png" />
+    <Resource Include="Resources\autocomplete-nb.png" />
     <Content Include="Resources\specflowpackage.ico" />
     <Content Include="Tracing\OutputWindow\readme.txt" />
   </ItemGroup>
@@ -257,6 +330,10 @@
       <Project>{C0AF4A43-0C3B-47C7-86DE-79FB632B1453}</Project>
       <Name>TechTalk.SpecFlow.Utils</Name>
     </ProjectReference>
+    <ProjectReference Include="..\IdeIntegration\TechTalk.SpecFlow.IdeIntegration.csproj">
+      <Project>{44D52C1B-0ABC-44B6-8EB8-0F754E264226}</Project>
+      <Name>TechTalk.SpecFlow.IdeIntegration</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">
@@ -268,6 +345,7 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <!-- VSSDK Settings -->
     <VsSDKInstall>..\..\lib\VS2010SDK</VsSDKInstall>

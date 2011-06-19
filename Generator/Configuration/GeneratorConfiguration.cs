@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using MiniDi;
 using TechTalk.SpecFlow.Configuration;
 using TechTalk.SpecFlow.Generator.UnitTestProvider;
 
@@ -8,6 +10,10 @@ namespace TechTalk.SpecFlow.Generator.Configuration
 {
     public class GeneratorConfiguration
     {
+        public ContainerRegistrationCollection CustomDependencies { get; set; }
+
+        public Version GeneratorVersion { get; set; }
+
         //language settings
         public CultureInfo FeatureLanguage { get; set; }
         public CultureInfo ToolLanguage { get; set; }
@@ -28,6 +34,8 @@ namespace TechTalk.SpecFlow.Generator.Configuration
 
             AllowDebugGeneratedFiles = ConfigDefaults.AllowDebugGeneratedFiles;
             AllowRowTests = ConfigDefaults.AllowRowTests;
+
+            GeneratorVersion = TestGeneratorFactory.GeneratorVersion;
         }
 
         internal void UpdateFromConfigFile(ConfigurationSectionHandler configSection)
@@ -56,6 +64,9 @@ namespace TechTalk.SpecFlow.Generator.Configuration
                 AllowDebugGeneratedFiles = configSection.Generator.AllowDebugGeneratedFiles;
                 AllowRowTests = configSection.Generator.AllowRowTests;
             }
+
+            if (configSection.Generator != null && configSection.Generator.Dependencies != null)
+                CustomDependencies = configSection.Generator.Dependencies;
         }
 
         private static Type GetTypeConfig(string typeName)
@@ -84,6 +95,9 @@ namespace TechTalk.SpecFlow.Generator.Configuration
                     GeneratorUnitTestProviderType = typeof(MsTest2010GeneratorProvider);
                     break;
                 case "mstest.silverlight":
+                case "mstest.silverlight3":
+                case "mstest.silverlight4":
+                case "mstest.windowsphone7":
                     GeneratorUnitTestProviderType = typeof(MsTestSilverlightGeneratorProvider);
                     break;
                 default:
@@ -92,5 +106,37 @@ namespace TechTalk.SpecFlow.Generator.Configuration
             }
 
         }
+
+        #region Equality
+
+        public bool Equals(GeneratorConfiguration other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other.FeatureLanguage, FeatureLanguage) && Equals(other.ToolLanguage, ToolLanguage) && Equals(other.GeneratorUnitTestProviderType, GeneratorUnitTestProviderType) && other.AllowDebugGeneratedFiles.Equals(AllowDebugGeneratedFiles) && other.AllowRowTests.Equals(AllowRowTests) && other.GeneratorVersion.Equals(GeneratorVersion);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != typeof (GeneratorConfiguration)) return false;
+            return Equals((GeneratorConfiguration) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int result = (FeatureLanguage != null ? FeatureLanguage.GetHashCode() : 0);
+                result = (result*397) ^ (ToolLanguage != null ? ToolLanguage.GetHashCode() : 0);
+                result = (result*397) ^ (GeneratorUnitTestProviderType != null ? GeneratorUnitTestProviderType.GetHashCode() : 0);
+                result = (result*397) ^ AllowDebugGeneratedFiles.GetHashCode();
+                result = (result*397) ^ AllowRowTests.GetHashCode();
+                return result;
+            }
+        }
+
+        #endregion
     }
 }

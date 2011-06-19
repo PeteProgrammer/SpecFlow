@@ -1,23 +1,47 @@
-﻿Next - ???
+﻿1.6.0 - 2011/04/04
+
+Breaking changes:
++ The Silverlight runtime assembly has been renamed to TechTalk.SpecFlow.Silverlight3.dll.
 
 New features:
 + Added a Set<T>(Func<T>) extension method. The Func<T> method will be invoked whenever ScenarioContext.Current.Get<T> is called.
 + Support for tagging (including @ignore) scenario outline examples. 
   NUnit and MbUnit: to filter for categories generated for the examples in the unit test runner, you need to 
   switch off row test generaiton (<generator allowRowTests="false" />)
-+ Using standard Gherkin parser (http://github.com/aslakhellesoy/gherkin) v2.3.3
++ Using standard Gherkin parser (http://github.com/aslakhellesoy/gherkin) v2.3.5
 + Support for converting table and multi-line text arguments with [StepArgumentTransformation] (by Chris Roff, roffster)
   See examples in Tests/FeatureTests/StepArgumentTransfomation
++ VS2010: Support for specifying color for the step text
++ Added a FillInstance<T>(T) extension method off of Table. When passed an instance of T, it will fill the instance with values from the table (like CreateInstance<T>).
++ VS2010: Re-generate feature file when the configuration has changed or a new version of SpecFlow is installed
++ VS2010: Improved intellisense for steps
++ VS2010: Intellisense for keywords
++ VS2010: "go to binding"
++ VS2010: Automatic table formatting when "|" is typed
++ VS2010: Tracing can be configured from tools / options. The environment variable SPECFLOW_TRACE is not used anymore.
++ Windows Phone 7 support, see https://github.com/techtalk/SpecFlow/wiki/Windows-Phone-7-Support (by Max Paulousky)
++ Silverlight runtime can be configured from query string (by Matt Ellis)
++ Generate test parameters from scenario outline parameters and example set name for MsTest (by Qingsong Yao)
++ Isolated test generator interface (can be used later for using the generator of the project instead of the generator of the IDE integration)
++ Official NuGet integration (by Daniel Sack)
 
 Fixed issues:
 + Scenario with only "*" steps fails with "System.ArgumentException: Unable to convert block to binding type"
 + Binding is reported as invalid if there is a matching step definition with different scope
-+ Support for datetime comparisons that ignore 12:00:00 AM (issue from Google Group)
++ Support for datetime comparisons that ignore 12:00:00 AM (issue 52)
 + Fix NUnit execution report to properly select features when .features is solely comprised Scenario Outlines. 
   (by Jon Archer)
 + Tags applied at the feature level are now applied as Silverlight TagAttributes on the class. (by Matt Ellis, citizenmatt)
 + Rethrowing exceptions caught during steps would lose the call stack on Silverlight. (by Matt Ellis, citizenmatt)
 + SpecFlow emits an erroneous suggestion for the step bindings in VB.NET (Issue 32)
++ Refactored VS2010 intagration to better maintanability
++ Refactored CreateSet<T> and CompareToSet<T> extension methods to use the same logic as CreateInstance<T> and CompareToInstance<T>.
++ Step Intellisense doesn't show in Feature Background (Issue 23)
++ Xunit Theory Attribute/InlineAttribute using incorrect namespace. (Issue 40, by Kerry Jones)
++ Scenario Outline - Multiple Scenarios table header row VS formatting issue (Issue 16)
++ SpecFlow step definition report generator throws unhandled exception when a scenario starts with "And" (Issue 45) 
++ VS2010: SpecFlow writes out feature and code-behind files with inconsistent line endings (Issue 28)
++ Step definitions can be implemented in abstract base classes (but the abstract base class must not have the [Binding] attribute). SpecFlow no longer tries to instantiate the abstract base class. (Issue 47)
 
 1.5.0 - 2010/12/17
 

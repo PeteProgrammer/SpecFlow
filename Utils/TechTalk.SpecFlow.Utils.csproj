@@ -41,13 +41,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\VersionInfo.cs">
-      <Link>VersionInfo.cs</Link>
+      <Link>Properties\VersionInfo.cs</Link>
     </Compile>
     <Compile Include="CodeDomHelper.cs" />
     <Compile Include="CodeDomProviderLanguage.cs" />
+    <Compile Include="FileSystemHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegexSampler.cs" />
+    <Compile Include="TempFile.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

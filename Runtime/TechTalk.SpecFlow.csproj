@@ -48,10 +48,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\lib\MiniDi\MiniDi.cs">
+      <Link>MiniDi\MiniDi.cs</Link>
+    </Compile>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\VersionInfo.cs">
-      <Link>VersionInfo.cs</Link>
+      <Link>Properties\VersionInfo.cs</Link>
     </Compile>
     <Compile Include="Assist\InstanceComparisonExtensionMethods.cs" />
+    <Compile Include="Assist\PivotTable.cs" />
     <Compile Include="Assist\PropertyExtensionMethods.cs" />
     <Compile Include="Assist\RowExtensionMethods.cs" />
     <Compile Include="Assist\SetComparisonExtensionMethods.cs" />
@@ -60,16 +67,17 @@
     <Compile Include="Bindings\StepContext.cs" />
     <Compile Include="Bindings\StepDefinitionKeyword.cs" />
     <Compile Include="Bindings\StepMethodBinding.cs" />
-    <Compile Include="Compatibility\CultureInfoHelper.cs" />
-    <Compile Include="Compatibility\EnumHelper.cs" />
-    <Compile Include="Compatibility\ExceptionHelper.cs" />
-    <Compile Include="Compatibility\MonoHelper.cs" />
-    <Compile Include="Configuration\ConfigDefaults.cs" />
+    <Compile Include="PlatformCompatibility\CultureInfoHelper.cs" />
+    <Compile Include="PlatformCompatibility\EnumHelper.cs" />
+    <Compile Include="PlatformCompatibility\ExceptionHelper.cs" />
+    <Compile Include="PlatformCompatibility\MonoHelper.cs" />
+    <Compile Include="PlatformSpecific\ConfigDefaults.cs" />
     <Compile Include="Configuration\ConfigurationServices.cs" />
     <Compile Include="Configuration\MissingOrPendingStepsOutcome.cs" />
     <Compile Include="CultureInfoScope.cs" />
     <Compile Include="DictionaryHelpers.cs" />
-    <Compile Include="GenerationTargetLanguage.cs" />
+    <Compile Include="GenerationTargetLanguage_obs.cs" />
+    <Compile Include="ProgrammingLanguage.cs" />
     <Compile Include="Steps.cs" />
     <Compile Include="Bindings\StepTransformationBinding.cs" />
     <Compile Include="Bindings\StepArgumentTypeConverter.cs" />
@@ -78,8 +86,8 @@
     <Compile Include="Bindings\BindingMatch.cs" />
     <Compile Include="Bindings\BindingRegistry.cs" />
     <Compile Include="Bindings\BindingType.cs" />
-    <Compile Include="Configuration\ConfigurationSectionHandler.cs" />
-    <Compile Include="Configuration\RuntimeConfiguration.cs" />
+    <Compile Include="PlatformSpecific\ConfigurationSectionHandler.cs" />
+    <Compile Include="PlatformSpecific\RuntimeConfiguration.cs" />
     <Compile Include="ErrorHandling\MissingStepDefinitionException.cs" />
     <Compile Include="ErrorHandling\PendingStepException.cs" />
     <Compile Include="ErrorHandling\SpecFlowException.cs" />
