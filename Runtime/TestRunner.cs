@@ -20,7 +20,7 @@ namespace TechTalk.SpecFlow
         private readonly ITestTracer testTracer;
         private readonly IUnitTestRuntimeProvider unitTestRuntimeProvider;
         private readonly IStepFormatter stepFormatter;
-        private IStepDefinitionSkeletonProvider _stepDefinitionSkeletonProvider;
+        private IStepDefinitionSkeletonProvider stepDefinitionSkeletonProvider;
         private readonly BindingRegistry bindingRegistry;
         private readonly IStepArgumentTypeConverter stepArgumentTypeConverter; 
 
@@ -74,7 +74,7 @@ namespace TechTalk.SpecFlow
                 OnFeatureEnd();
             }
 
-            _stepDefinitionSkeletonProvider = ObjectContainer.StepDefinitionSkeletonProvider(featureInfo.GenerationTargetLanguage);
+            stepDefinitionSkeletonProvider = ObjectContainer.StepDefinitionSkeletonProvider(featureInfo.GenerationTargetLanguage);
 
             // The Generator defines the value of FeatureInfo.Language: either feature-language or language from App.config or the default
             // The runtime can define the binding-culture: Value is configured on App.config, else it is null
@@ -139,7 +139,7 @@ namespace TechTalk.SpecFlow
             {
                 var missingSteps = ObjectContainer.ScenarioContext.MissingSteps.Distinct().OrderBy(s => s);
                 string bindingSkeleton =
-                    _stepDefinitionSkeletonProvider.GetBindingClassSkeleton(
+                    stepDefinitionSkeletonProvider.GetBindingClassSkeleton(
                         string.Join(Environment.NewLine, missingSteps.ToArray()));
                 errorProvider.ThrowPendingError(ObjectContainer.ScenarioContext.TestStatus, string.Format("{0}{2}{1}",
                     errorProvider.GetMissingStepDefinitionError().Message,
@@ -232,44 +232,38 @@ namespace TechTalk.SpecFlow
             if (!match.Success)
                 return null;
 
-            var extraArgs = CalculateExtraArgs(stepArgs);
             int scopeMatches = 0;
-
-            if (useParamMatching)
-            {
-                var regexArgs = match.Groups.Cast<Group>().Skip(1).Select(g => g.Value).ToArray();
-
-                // check if the regex + extra arguments match to the binding method parameters
-                if (regexArgs.Length + extraArgs.Length != stepBinding.ParameterTypes.Length)
-                    return null;
-
-                // Check if regex arguments can be converted to the method parameters
-                CultureInfo cultureInfo = FeatureContext.Current.BindingCulture;
-                for (int regexArgIndex = 0; regexArgIndex < regexArgs.Length; regexArgIndex++)
-                {
-                    Type parameterType = stepBinding.ParameterTypes[regexArgIndex];
-
-                    if (!stepArgumentTypeConverter.CanConvert(regexArgs[regexArgIndex], parameterType, cultureInfo))
-                        return null;
-                }
-
-                // Check if there are corresponting parameters defined for the extra arguments 
-                for (int extraArgIndex = 0; extraArgIndex < extraArgs.Length; extraArgIndex++)
-                {
-                    Type parameterType = stepBinding.ParameterTypes[extraArgIndex + regexArgs.Length];
-                    Type argType = extraArgs[extraArgIndex].GetType();
-                    if (argType != parameterType)
-                        return null;
-                }
-            }
-
             if (useScopeMatching && stepBinding.IsScoped)
             {
                 if (!stepBinding.BindingScope.Match(stepArgs.StepContext, out scopeMatches))
                     return null;
             }
 
-            return new BindingMatch(stepBinding, match, extraArgs, stepArgs, scopeMatches);
+            var bindingMatch = new BindingMatch(stepBinding, match, CalculateExtraArgs(stepArgs), stepArgs, scopeMatches);
+
+            if (useParamMatching)
+            {
+                // check if the regex + extra arguments match to the binding method parameters
+                if (bindingMatch.Arguments.Length != stepBinding.ParameterTypes.Length)
+                    return null;
+
+                // Check if regex & extra arguments can be converted to the method parameters
+                if (bindingMatch.Arguments.Where(
+                    (arg, argIndex) => !CanConvertArg(arg, stepBinding.ParameterTypes[argIndex])).Any())
+                    return null;
+            }
+            return bindingMatch;
+        }
+
+        private bool CanConvertArg(object value, Type typeToConvertTo)
+        {
+            Debug.Assert(value != null);
+            Debug.Assert(typeToConvertTo != null);
+
+            if (value.GetType().IsAssignableFrom(typeToConvertTo))
+                return true;
+
+            return stepArgumentTypeConverter.CanConvert(value, typeToConvertTo, FeatureContext.Current.BindingCulture);
         }
 
         private static readonly object[] emptyExtraArgs = new object[0];
@@ -378,27 +372,30 @@ namespace TechTalk.SpecFlow
                 // the matching without param check
 
                 List<BindingMatch> matchesWithoutScopeCheck = GetMatchesWithoutScopeCheck(stepArgs);
-                if (matchesWithoutScopeCheck.Count > 0)
-                {
+//                if (matchesWithoutScopeCheck.Count > 0)
+//                {
                     // no match, because of scope filter
-                    throw errorProvider.GetNoMatchBecauseOfScopeFilterError(matchesWithoutScopeCheck, stepArgs);
+//                    throw errorProvider.GetNoMatchBecauseOfScopeFilterError(matchesWithoutScopeCheck, stepArgs);
+//                }
+
+                if (matchesWithoutScopeCheck.Count == 0)
+                {
+                    List<BindingMatch> matchesWithoutParamCheck = GetMatchesWithoutParamCheck(stepArgs);
+                    if (matchesWithoutParamCheck.Count == 1)
+                    {
+                        // no ambiguouity, but param error -> execute will find it out
+                        return matchesWithoutParamCheck[0];
+                    }
+                    if (matchesWithoutParamCheck.Count > 1)
+                    {
+                        // ambiguouity, because of param error
+                        throw errorProvider.GetAmbiguousBecauseParamCheckMatchError(matchesWithoutParamCheck, stepArgs);
+                    }
                 }
 
-                List<BindingMatch> matchesWithoutParamCheck = GetMatchesWithoutParamCheck(stepArgs);
-                if (matchesWithoutParamCheck.Count == 1)
-                {
-                    // no ambiguouity, but param error -> execute will find it out
-                    return matchesWithoutParamCheck[0];
-                }
-                if (matchesWithoutParamCheck.Count > 1)
-                {
-                    // ambiguouity, because of param error
-                    throw errorProvider.GetAmbiguousBecauseParamCheckMatchError(matchesWithoutParamCheck, stepArgs);
-                }
-
-                testTracer.TraceNoMatchingStepDefinition(stepArgs, ObjectContainer.FeatureContext.FeatureInfo.GenerationTargetLanguage);
+                testTracer.TraceNoMatchingStepDefinition(stepArgs, ObjectContainer.FeatureContext.FeatureInfo.GenerationTargetLanguage, matchesWithoutScopeCheck);
                 ObjectContainer.ScenarioContext.MissingSteps.Add(
-                    _stepDefinitionSkeletonProvider.GetStepDefinitionSkeleton(stepArgs));
+                    stepDefinitionSkeletonProvider.GetStepDefinitionSkeleton(stepArgs));
                 throw errorProvider.GetMissingStepDefinitionError();
             }
             if (matches.Count > 1)
@@ -445,30 +442,27 @@ namespace TechTalk.SpecFlow
 
         private object[] GetExecuteArguments(BindingMatch match)
         {
-            List<object> arguments = new List<object>();
+            if (match.Arguments.Length != match.StepBinding.ParameterTypes.Length)
+                throw errorProvider.GetParameterCountError(match, match.Arguments.Length);
 
-            var regexArgs = match.Match.Groups.Cast<Group>().Skip(1).Select(g => g.Value).ToArray();
+            var arguments = match.Arguments.Select(
+                (arg, argIndex) => ConvertArg(arg, match.StepBinding.ParameterTypes[argIndex]))
+                .ToArray();
 
-            if (regexArgs.Length + match.ExtraArguments.Length != match.StepBinding.ParameterTypes.Length)
-                throw errorProvider.GetParameterCountError(match, regexArgs.Length + match.ExtraArguments.Length);
-
-            CultureInfo cultureInfo = FeatureContext.Current.BindingCulture;
-            for (int regexArgIndex = 0; regexArgIndex < regexArgs.Length; regexArgIndex++)
-            {
-                Type parameterType = match.StepBinding.ParameterTypes[regexArgIndex];
-
-                var convertedArg = stepArgumentTypeConverter.Convert(
-                    regexArgs[regexArgIndex], parameterType, cultureInfo);
-                arguments.Add(convertedArg);
-            }
-
-            arguments.AddRange(match.ExtraArguments);
-
-            if (arguments.Count != match.StepBinding.ParameterTypes.Length)
-                throw errorProvider.GetParameterCountError(match, arguments.Count);
-
-            return arguments.ToArray();
+            return arguments;
         }
+
+        private object ConvertArg(object value, Type typeToConvertTo)
+        {
+            Debug.Assert(value != null);
+            Debug.Assert(typeToConvertTo != null);
+
+            if (value.GetType().IsAssignableFrom(typeToConvertTo))
+                return value;
+
+            return stepArgumentTypeConverter.Convert(value, typeToConvertTo, FeatureContext.Current.BindingCulture);
+        }
+
         #endregion
 
         #region Given-When-Then

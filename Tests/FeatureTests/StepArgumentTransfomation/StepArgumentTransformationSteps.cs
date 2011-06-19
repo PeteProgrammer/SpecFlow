@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Xml;
 using NUnit.Framework;
 
 namespace TechTalk.SpecFlow.FeatureTests.StepArgumentTransfomation
@@ -12,6 +13,13 @@ namespace TechTalk.SpecFlow.FeatureTests.StepArgumentTransfomation
     public class Terminal
     {
         public string Id { get; set; }
+    }
+
+    public class Booking
+    {
+        public string Origin;
+        public string Destination;
+        public DateTime DepartureDate;
     }
 
     [Binding]
@@ -45,6 +53,33 @@ namespace TechTalk.SpecFlow.FeatureTests.StepArgumentTransfomation
     }
 
     [Binding]
+    public class BookingConverter
+    {
+        [StepArgumentTransformation]
+        public Booking Transform(Table table)
+        {
+            return new Booking
+            {
+                Origin = table.Rows[0]["Origin"],
+                Destination = table.Rows[0]["Destination"],
+                DepartureDate = DateTime.Parse(table.Rows[0]["Departure Date"])
+            };
+        }
+    }
+
+    [Binding]
+    public class XmlDocumentConverter
+    {
+        [StepArgumentTransformation]
+        public XmlDocument Transform(string xml)
+        {
+            XmlDocument result = new XmlDocument();
+            result.LoadXml(xml);
+            return result;
+        }
+    }
+
+    [Binding]
     public class StepArgumentTransformationSteps
     {
         [Given("(.*) has been registered at (.*)")]
@@ -53,6 +88,10 @@ namespace TechTalk.SpecFlow.FeatureTests.StepArgumentTransfomation
         
         [Given("(.*) has been registered at (.*)")]
         public void RegistrationStep(User user, Terminal terminal)
+        { }
+
+        [Given("(.*) has booked a flight")]
+        public void FlightBookingStep(User user, Booking booking)
         { }
 
         [When("in App.config die bindingCulture auf 'en-US' konfiguriert ist")]
@@ -71,7 +110,29 @@ namespace TechTalk.SpecFlow.FeatureTests.StepArgumentTransfomation
         public void RegistrationStep(string culture)
         {
             Assert.AreEqual(culture, Thread.CurrentThread.CurrentCulture.Name);
-        }     
+        }
 
+        [Given(@"I have a step binding with an XmlDocument parameter")]
+        [Given(@"a step argument converter from string to XmlDocument")]
+        public void GivenIHaveAStepBindingWithAnXmlDocumentParameter()
+        {
+            //nop
+        }
+
+        private XmlDocument savedXml = null;
+
+        [When(@"a step is executed that macthes to the binding with a long XML argument")]
+        public void WhenAStepIsExecutedThatMacthesToTheBindingWithALongXMLArgument(XmlDocument xml)
+        {
+            Assert.IsNotNull(xml);
+            savedXml = xml;
+        }
+
+        [Then(@"the parsed XML is passed to the step binding")]
+        public void ThenTheParsedXMLIsPassedToTheStepBinding()
+        {
+            Assert.IsNotNull(savedXml);
+            StringAssert.Contains("<Root>", savedXml.OuterXml);
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CodeDom;
 using System.Collections.Generic;
+using TechTalk.SpecFlow.Parser.SyntaxElements;
 
 namespace TechTalk.SpecFlow.Generator.UnitTestProvider
 {
@@ -40,6 +41,11 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
             currentTestTypeDeclaration = typeDeclaration;
         }
 
+        public virtual void SetTestFixtureCategories(CodeTypeDeclaration typeDeclaration, IEnumerable<string> categories)
+        {
+            SetCategories(typeDeclaration.CustomAttributes, categories);
+        }
+
         private void SetDescription(CodeAttributeDeclarationCollection customAttributes, string description)
         {
             customAttributes.Add(
@@ -58,11 +64,6 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
                         new CodePrimitiveExpression(name)),
                     new CodeAttributeArgument(
                         new CodePrimitiveExpression(value))));
-        }
-
-        public virtual void SetTestFixtureCategories(CodeTypeDeclaration typeDeclaration, IEnumerable<string> categories)
-        {
-            //MsTest does not support caregories... :(
         }
 
         public virtual void SetTest(CodeMemberMethod memberMethod, string title)
@@ -87,7 +88,7 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
             throw new NotSupportedException();
         }
 
-        public void SetRow(CodeMemberMethod memberMethod, IEnumerable<string> arguments)
+        public void SetRow(CodeMemberMethod memberMethod, IEnumerable<string> arguments, IEnumerable<string> tags, bool isIgnored)
         {
             //MsTest does not support row tests
             throw new NotSupportedException();

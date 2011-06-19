@@ -20,6 +20,8 @@ namespace TechTalk.SpecFlow.Parser.SyntaxElements
 
     public class ExampleSet
     {
+        public Tags Tags { get; set; }
+        public string Keyword { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public Table Table { get; set; }
@@ -28,10 +30,12 @@ namespace TechTalk.SpecFlow.Parser.SyntaxElements
         {
         }
 
-        public ExampleSet(string title, string description, Table table)
+        public ExampleSet(string keyword, string title, string description, Tags tags, Table table)
         {
+            Keyword = keyword;
             Title = title ?? string.Empty;
             Description = description;
+            Tags = tags;
             Table = table;
         }
     }
