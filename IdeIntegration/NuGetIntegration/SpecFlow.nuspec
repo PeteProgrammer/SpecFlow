@@ -2,7 +2,7 @@
 <package xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <metadata xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <id>SpecFlow</id>
-    <version>1.6.0</version>
+    <version>1.6.1</version>
     <title>SpecFlow</title>
     <authors>TechTalk</authors>
     <owners>TechTalk</owners>
@@ -19,23 +19,20 @@
   <files>
 
     <!-- common reference files -->
-    <file src="..\..\Runtime\bin\Release\TechTalk.SpecFlow.dll" target="lib\net35" />
+    <file src="..\..\Installer\SpecFlowBinPackage\bin\package\lib\TechTalk.SpecFlow.dll" target="lib\net35" />
 
     <!-- alternative runtimes -->
-    <file src="..\..\AlternativeRuntimes\Runtime.Silverlight3\Bin\Release\TechTalk.SpecFlow.Silverlight3.dll" target="lib\sl3" />
-    <file src="..\..\AlternativeRuntimes\Runtime.Silverlight3\Bin\Release\TechTalk.SpecFlow.Silverlight3.dll" target="lib\sl4-wp" />
+    <file src="..\..\Installer\SpecFlowBinPackage\bin\package\lib\TechTalk.SpecFlow.Silverlight3.dll" target="lib\sl3" />
+    <file src="..\..\Installer\SpecFlowBinPackage\bin\package\lib\TechTalk.SpecFlow.WindowsPhone7.dll" target="lib\sl4-wp" />
 
     <!-- Tools -->
-    <file src="..\..\Tools\bin\Release\*.dll" target="tools" />
-    <file src="..\..\Tools\bin\Release\*.exe" target="tools" />
-    <file src="..\..\Tools\bin\Release\MsBuild\*" target="tools" />
+    <file src="..\..\Installer\SpecFlowBinPackage\bin\package\tools\*.*" target="tools" />
 
     <!-- config -->
     <file src="App.config.transform" target="content" />
 
-    <!-- version information -->
-    <file src="..\..\LICENSE.txt" target="" />
-    <file src="..\..\changelog.txt" target="" />
+    <!-- license & version information -->
+    <file src="..\..\Installer\SpecFlowBinPackage\bin\package\*.txt" target="" />
 
   </files>
 </package>
